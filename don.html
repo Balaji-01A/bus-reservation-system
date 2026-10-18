@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hyderabad - Srikalahasti Bus</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root{--bg:#f2f5fa;--ink:#16213a;--mut:#64708a;--line:#d5dcea;--pri:#1565e0;--ok:#1b9e5a;--bad:#d63a3a;--warn:#e69a14;--or:#ff9800}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,Roboto,sans-serif;background:var(--bg);color:var(--ink);padding:12px}
+.wrap{max-width:560px;margin:auto}h1{color:var(--pri);font-size:21px;margin:6px 0 12px}
+.tabs{display:flex;gap:8px;margin-bottom:14px}.tabs button{flex:1;padding:12px 4px;border:1px solid var(--line);background:#fff;border-radius:12px;font-size:15px;font-weight:600;color:var(--mut)}
+.tabs button.on{background:var(--pri);color:#fff;border-color:var(--pri);box-shadow:0 4px 10px rgba(21,101,224,.35)}
+.card{background:#fff;border-radius:18px;padding:18px;margin-bottom:12px;box-shadow:0 2px 8px rgba(20,40,80,.08)}
+label{display:block;margin:14px 0 6px;font-size:16px}
+input,select{width:100%;padding:13px;border:1px solid var(--line);border-radius:12px;font-size:16px;background:#fff;color:var(--ink)}
+input:focus,select:focus{outline:0;border-color:var(--or);box-shadow:0 0 0 2px rgba(255,152,0,.25)}
+.btn{width:100%;margin-top:16px;padding:15px;border:0;border-radius:14px;background:var(--pri);color:#fff;font-size:17px;font-weight:700}
+.btn.sec{background:#e8edf7;color:var(--ink)}.btn.red{background:var(--bad)}.btn.wa{background:#1fa855}.btn.or{background:var(--or);margin:0;width:auto;padding:0 22px}
+.sm{padding:8px 12px;font-size:13px;width:auto;margin:0;border-radius:8px}.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.promo{display:flex;gap:10px}
+.legend{display:flex;justify-content:space-around;font-size:15px;color:var(--mut);margin:6px 0}
+.legend i{display:inline-block;width:16px;height:16px;border-radius:4px;vertical-align:-3px;margin-right:6px}
+.bus{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;max-width:300px;margin:12px auto}
+.seat{padding:10px 0;text-align:center;border-radius:8px;border:2px solid var(--ok);color:var(--ok);font-weight:700;background:#fff}
+.seat.gap{visibility:hidden}.seat.taken{background:#cfd5e2;border-color:#cfd5e2;color:#7a859c}.seat.sel{background:var(--pri);border-color:var(--pri);color:#fff}
+.sum{background:#f7f9fd;border-radius:12px;padding:12px;margin-top:12px;font-size:15px}.sum div{display:flex;justify-content:space-between;padding:3px 0}.sum .t{font-weight:800;font-size:18px;border-top:1px dashed var(--line);margin-top:6px;padding-top:8px}
+.tag{display:inline-block;padding:3px 9px;border-radius:20px;font-size:12px;font-weight:700;color:#fff}
+.upcoming{background:var(--ok)}.cancelled{background:var(--bad)}.running{background:var(--warn)}.arrived{background:#6b4fd3}
+.muted{color:var(--mut);font-size:14px}.hero{background:#eaf1fd;border-radius:12px;padding:12px;margin:10px 0}.big{font-size:24px;font-weight:800;color:var(--pri)}
+.bar{height:10px;background:#e3e9f4;border-radius:6px;overflow:hidden;margin:10px 0}.bar i{display:block;height:100%;background:var(--pri);transition:width .5s}
+#map{height:300px;border-radius:12px;margin:10px 0;background:#dfe7f3}
+.stop{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #eef1f7;font-size:14px}.stop.done{color:var(--ok);font-weight:600}.stop.mine{background:#fff7e0;font-weight:700}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#16213a;color:#fff;padding:12px 18px;border-radius:10px;display:none;z-index:9999;max-width:90%}
+</style></head><body><div class="wrap">
+<h1>🚌 Hyderabad ⇄ Srikalahasti</h1>
+<div class="tabs"><button data-t="book" class="on">Book</button><button data-t="my">My Tickets</button><button data-t="track">Live Track</button></div>
+
+<div id="book" class="card">
+ <label style="margin-top:0">Travel Direction</label>
+ <select id="dir"><option value="HS">Hyderabad → Srikalahasti</option><option value="SH">Srikalahasti → Hyderabad</option></select>
+ <div class="two"><div><label>Passenger Name</label><input id="name" placeholder="Name"></div>
+  <div><label>Mobile Number</label><input id="mobile" inputmode="numeric" maxlength="10" placeholder="10-digit mobile"></div></div>
+ <div class="two"><div><label>Boarding Stop</label><select id="from"></select></div><div><label>Drop Stop</label><select id="to"></select></div></div>
+ <div class="two"><div><label>Travel Date</label><input id="date" type="date"></div><div><label>Bus Service</label><select id="busSel"></select></div></div>
+ <label>Promo Code (Optional)</label>
+ <div class="promo"><input id="promo" placeholder="e.g. FIRST10" style="text-transform:uppercase"><button class="btn or" id="applyBtn">Apply</button></div>
+ <div class="muted" id="promoMsg" style="margin-top:6px">Codes: FIRST10, SAVE50, STUDENT15</div>
+ <label>Select Seats <span class="muted" id="seatInfo"></span></label>
+ <div class="legend"><span><i style="border:2px solid var(--ok)"></i>Available</span><span><i style="background:var(--pri)"></i>Selected</span><span><i style="background:#cfd5e2"></i>Taken</span></div>
+ <div class="bus" id="seats"></div>
+ <div class="sum" id="sum"></div>
+ <button class="btn" id="saveBtn">Confirm &amp; Book Ticket</button><button class="btn sec" id="cancelEdit" style="display:none">Cancel Update</button>
+</div>
+
+<div id="my" style="display:none"><div class="card"><label style="margin-top:0">Search by mobile number</label>
+ <input id="q" inputmode="numeric" maxlength="10" placeholder="Enter mobile (blank = all)"></div><div id="list"></div></div>
+
+<div id="track" style="display:none"><div class="card"><label style="margin-top:0">Mobile number or Ticket ID</label>
+ <input id="tid" placeholder="Mobile or ID e.g. BK1234"><button class="btn" id="trackBtn">Track Bus</button></div><div id="trackOut"></div></div>
+</div><div id="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9998;align-items:center;justify-content:center;padding:20px">
+ <div class="card" style="max-width:380px;width:100%;margin:0"><div id="mTxt"></div>
+ <div class="row"><button class="btn sm red" id="mYes" style="padding:12px 16px;font-size:15px">Yes, Cancel</button><button class="btn sm sec" id="mNo" style="padding:12px 16px;font-size:15px">Keep ticket</button></div></div></div>
+<div id="toast"></div>
+
+<script>
+const KEY="don_bus_v1",SEATS=40,MAXSEATS=6,TRIP_H=10.5,TOTAL=596;
+const BUSES=[{id:"B1",name:"Super Luxury",time:"20:00",price:900},{id:"B2",name:"Garuda Semi-Sleeper",time:"21:00",price:1000},{id:"B3",name:"AC Sleeper",time:"22:00",price:1300}];
+const PROMOS={FIRST10:{pct:10},SAVE50:{flat:50},STUDENT15:{pct:15}};
+const ROUTE=[["Hyderabad",17.3850,78.4867,0],["Jadcherla",16.7628,78.1426,90],["Kurnool",15.8281,78.0373,215],["Nandyal",15.4786,78.4836,300],
+ ["Kadapa",14.4673,78.8242,410],["Rajampet",14.1953,79.1580,460],["Tirupati",13.6288,79.4192,560],["Srikalahasti",13.7499,79.7036,596]];
+function stops(dir){let r=ROUTE.map(([n,lat,lng,k])=>({n,lat,lng,d:k}));return dir==="SH"?r.reverse().map(s=>({...s,d:TOTAL-s.d})):r}
+let selected=[],editId=null,promo=null,timer=null,map=null,marker=null;const $=id=>document.getElementById(id);
+function load(){try{return JSON.parse(localStorage.getItem(KEY))||[]}catch(e){return[]}}
+function save(a){try{localStorage.setItem(KEY,JSON.stringify(a))}catch(e){toast("Storage blocked")}}
+function newId(a){let id;do{id="BK"+(1000+Math.floor(Math.random()*9000))}while(a.some(t=>t.id===id));return id}
+function toast(m){const t=$("toast");t.textContent=m;t.style.display="block";clearTimeout(t._h);t._h=setTimeout(()=>t.style.display="none",3200)}
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const bus=id=>BUSES.find(b=>b.id===id);
+const depMs=t=>new Date(t.date+"T"+bus(t.busId).time+":00").getTime();
+const stopMs=(t,i)=>depMs(t)+stops(t.dir)[i].d/TOTAL*TRIP_H*3600000;
+const fmt=ms=>new Date(ms).toLocaleString("en-IN",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
+const unit=(b,dir,f,t)=>{const s=stops(dir);return Math.round(b.price*(s[t].d-s[f].d)/TOTAL/10)*10};
+function dur(ms){const m=Math.max(1,Math.round(ms/60000)),h=Math.floor(m/60);return h?`${h}h ${m%60}m`:`${m} min`}
+function calc(){const p=unit(bus($("busSel").value),$("dir").value,+$("from").value,+$("to").value),base=p*selected.length;let disc=0;
+ if(promo){const o=PROMOS[promo];disc=o.pct?Math.round(base*o.pct/100):Math.min(o.flat,base)}return{p,base,disc,total:base-disc}}
+
+/* setup */
+(function(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());$("date").min=$("date").value=d.toISOString().slice(0,10);
+ $("busSel").innerHTML=BUSES.map(b=>`<option value="${b.id}">${b.name} • ${b.time}</option>`).join("");fillFrom()})();
+function fillFrom(){const s=stops($("dir").value);$("from").innerHTML=s.slice(0,-1).map((x,i)=>`<option value="${i}">${x.n}</option>`).join("");fillTo()}
+function fillTo(){const s=stops($("dir").value),f=+$("from").value;$("to").innerHTML=s.map((x,i)=>i>f?`<option value="${i}">${x.n}</option>`:"").join("");$("to").value=s.length-1;drawSeats()}
+$("dir").oninput=()=>{selected=[];fillFrom()};$("from").oninput=fillTo;$("to").oninput=drawSeats;
+["date","busSel"].forEach(i=>$(i).oninput=()=>{selected=[];drawSeats()});
+$("applyBtn").onclick=()=>{const c=$("promo").value.trim().toUpperCase();
+ if(!c){promo=null;$("promoMsg").textContent="Promo removed";return drawSeats()}
+ if(PROMOS[c]){promo=c;$("promoMsg").innerHTML=`✅ <b>${c}</b> applied`}else{promo=null;$("promoMsg").textContent="❌ Invalid promo code"}drawSeats()};
+
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>show(b.dataset.t));
+function show(t){["book","my","track"].forEach(x=>$(x).style.display=x===t?"block":"none");
+ document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t===t));clearInterval(timer);
+ if(t==="my")renderList();if(t==="book")drawSeats()}
+
+/* seats */
+function takenSeats(){return load().filter(x=>x.status!=="Cancelled"&&x.id!==editId&&x.date===$("date").value&&x.busId===$("busSel").value&&x.dir===$("dir").value).flatMap(x=>x.seats)}
+function drawSeats(){const taken=takenSeats(),box=$("seats");box.innerHTML="";let n=1;selected=selected.filter(s=>!taken.includes(s));
+ for(let r=0;r<SEATS/4;r++)for(let c=0;c<5;c++){const d=document.createElement("div");
+  if(c===2){d.className="seat gap";d.textContent="0";box.appendChild(d);continue}
+  const s=n++;d.textContent=s;d.className="seat"+(taken.includes(s)?" taken":selected.includes(s)?" sel":"");
+  if(!taken.includes(s))d.onclick=()=>{if(!selected.includes(s)&&selected.length>=MAXSEATS)return toast("Max "+MAXSEATS+" seats");
+   selected=selected.includes(s)?selected.filter(x=>x!==s):[...selected,s].sort((a,b)=>a-b);drawSeats()};box.appendChild(d)}
+ $("seatInfo").textContent=selected.length?"→ "+selected.join(", "):"";
+ const c=calc();$("sum").innerHTML=`<div><span>Fare per seat</span><span>₹${c.p}</span></div><div><span>Seats</span><span>${selected.length}</span></div>`+
+  (c.disc?`<div style="color:var(--ok)"><span>Discount (${promo})</span><span>- ₹${c.disc}</span></div>`:"")+`<div class="t"><span>Total</span><span>₹${c.total}</span></div>`}
+
+/* book / update */
+$("saveBtn").onclick=()=>{
+ const name=$("name").value.trim(),mobile=$("mobile").value.trim(),date=$("date").value,busId=$("busSel").value,dir=$("dir").value,from=+$("from").value,to=+$("to").value;
+ if(name.length<2)return toast("Enter passenger name");
+ if(!/^[6-9]\d{9}$/.test(mobile))return toast("Enter valid 10-digit mobile");
+ if(!date)return toast("Select travel date");
+ if(new Date(date+"T"+bus(busId).time+":00")<new Date())return toast("This bus already left, pick later date/bus");
+ if(!selected.length)return toast("Select at least 1 seat");
+ const all=load(),taken=all.filter(x=>x.status!=="Cancelled"&&x.id!==editId&&x.date===date&&x.busId===busId&&x.dir===dir).flatMap(x=>x.seats);
+ if(selected.some(s=>taken.includes(s))){drawSeats();return toast("Seat just got booked, pick another")}
+ const c=calc(),data={name,mobile,date,busId,dir,from,to,seats:[...selected],promo,total:c.total};
+ if(editId)Object.assign(all.find(x=>x.id===editId),data);else all.push({id:newId(all),...data,status:"Confirmed"});
+ save(all);toast(editId?"Ticket updated ✅":"Booked ✅ Send WhatsApp to passenger");$("q").value=mobile;resetForm();show("my")};
+$("cancelEdit").onclick=()=>{resetForm();show("my")};
+function resetForm(){editId=null;selected=[];promo=null;$("promo").value="";$("promoMsg").textContent="Codes: FIRST10, SAVE50, STUDENT15";
+ $("name").value="";$("mobile").value="";$("saveBtn").textContent="Confirm & Book Ticket";$("cancelEdit").style.display="none";drawSeats()}
+
+function status(t){if(t.status==="Cancelled")return"Cancelled";const n=Date.now(),d=depMs(t);return n<d?"Upcoming":n<d+TRIP_H*3600000?"Running":"Arrived"}
+// Refund policy: boarding time ki 8 hrs or more mundu = 50%, 8 hrs lopu = 0%
+function hoursLeft(t){return(stopMs(t,t.from)-Date.now())/3600000}
+function refund(t){return hoursLeft(t)>=8?Math.round(t.total*0.5):0}
+function canCancel(t){return t.status!=="Cancelled"&&hoursLeft(t)>0}
+function link(t){return location.href.split("#")[0]+"#t="+btoa(encodeURIComponent(JSON.stringify(t)))}
+function msg(t){const s=stops(t.dir);return `Hi ${t.name}, ticket ${t.id} confirmed ✅\n${s[t.from].n} → ${s[t.to].n}\nBoarding at ${s[t.from].n}: ${fmt(stopMs(t,t.from))}\nDrop at ${s[t.to].n}: ${fmt(stopMs(t,t.to))}\nBus: ${bus(t.busId).name} • Seats: ${t.seats.join(", ")}\nTotal paid: ₹${t.total}\nTrack bus: ${link(t)}`}
+function sendWA(id){const t=load().find(x=>x.id===id);window.open("https://wa.me/91"+t.mobile+"?text="+encodeURIComponent(msg(t)),"_blank")}
+function importLink(){const m=location.hash.match(/^#t=(.+)$/);if(!m)return;
+ try{const t=JSON.parse(decodeURIComponent(atob(m[1])));if(!t.id||!bus(t.busId)||!stops(t.dir)[t.to]||!Array.isArray(t.seats))throw 0;
+  const a=load();if(!a.some(x=>x.id===t.id)){a.push(t);save(a)}history.replaceState(null,"",location.pathname+location.search);trackId(t.id)}catch(e){toast("Invalid tracking link")}}
+
+/* my tickets */
+$("q").oninput=renderList;
+function renderList(){const q=$("q").value.trim(),rows=load().filter(t=>!q||t.mobile===q).reverse();
+ $("list").innerHTML=rows.length?rows.map(t=>{const st=status(t),s=stops(t.dir);return`<div class="card">
+  <div style="display:flex;justify-content:space-between"><b>${esc(t.id)}</b><span class="tag ${st.toLowerCase()}">${st}</span></div>
+  <div style="margin-top:6px;font-size:17px"><b>${s[t.from].n} → ${s[t.to].n}</b></div>
+  <div class="muted">${bus(t.busId).name} • boarding ${fmt(stopMs(t,t.from))}</div>
+  <div class="muted">${esc(t.name)} • ${esc(t.mobile)}</div>
+  <div class="muted">Seats ${t.seats.join(", ")} • Paid ₹${t.total}${t.promo?` (${esc(t.promo)})`:""}${t.status==="Cancelled"&&t.refund!=null?` • Refund ₹${t.refund}`:""}</div>
+  <div class="row"><button class="btn sm sec" onclick="trackId('${t.id}')">Track</button>
+  ${st==="Upcoming"?`<button class="btn sm" onclick="editTicket('${t.id}')">Update</button>`:""}${canCancel(t)?`<button class="btn sm red" onclick="cancelTicket('${t.id}')">Cancel</button>`:""}
+  ${st!=="Cancelled"?`<button class="btn sm wa" onclick="sendWA('${t.id}')">WhatsApp</button>`:""}</div></div>`}).join(""):`<div class="card muted">No tickets found.</div>`}
+function cancelTicket(id){const t=load().find(x=>x.id===id),r=refund(t);
+ $("mTxt").innerHTML=`<b>Cancel ticket ${id}?</b><p>Paid: ₹${t.total}<br>Refund: <b>₹${r}</b> ${r?"(50%)":"(0%)"}<br><span class="muted">Boarding in ${Math.floor(hoursLeft(t))}h ${Math.round((hoursLeft(t)%1)*60)}m</span></p>
+  <p class="muted">Policy: boarding ki 8 hrs or more mundu cancel chesthe 50% refund. 8 hrs lopu cancel chesthe refund ledu.</p>`;
+ $("modal").style.display="flex";
+ $("mNo").onclick=()=>{$("modal").style.display="none"};
+ $("mYes").onclick=()=>{const a=load(),x=a.find(y=>y.id===id);x.status="Cancelled";x.refund=r;save(a);$("modal").style.display="none";
+  toast("Cancelled. Refund ₹"+r);$("track").style.display==="block"?trackId(id):renderList()}}
+function editTicket(id){const t=load().find(x=>x.id===id);editId=id;selected=[...t.seats];promo=t.promo||null;
+ $("name").value=t.name;$("mobile").value=t.mobile;$("date").value=t.date;$("busSel").value=t.busId;$("dir").value=t.dir;fillFrom();$("from").value=t.from;fillTo();$("to").value=t.to;
+ $("promo").value=promo||"";$("saveBtn").textContent="Save Changes";$("cancelEdit").style.display="block";show("book");drawSeats();window.scrollTo(0,0)}
+
+/* live track */
+function posAt(s,km){for(let i=1;i<s.length;i++)if(km<=s[i].d){const a=s[i-1],b=s[i],f=Math.max(0,(km-a.d)/(b.d-a.d));return[a.lat+(b.lat-a.lat)*f,a.lng+(b.lng-a.lng)*f]}return[s[s.length-1].lat,s[s.length-1].lng]}
+$("trackBtn").onclick=()=>{const v=$("tid").value.trim().toUpperCase();
+ if(/^\d{10}$/.test(v)){const r=load().filter(t=>t.mobile===v&&t.status!=="Cancelled");
+  if(!r.length)return $("trackOut").innerHTML=`<div class="card muted">No active tickets for ${v}.</div>`;
+  const up=r.filter(t=>status(t)!=="Arrived").sort((a,b)=>depMs(a)-depMs(b));return trackId((up.length?up:r)[0].id)}
+ trackId(v)};
+function trackId(id){show("track");$("tid").value=id;const t=load().find(x=>x.id===id);
+ if(!t){$("trackOut").innerHTML=`<div class="card muted">No ticket with ID "${esc(id)}".</div>`;return}
+ const s=stops(t.dir);$("trackOut").innerHTML=`<div class="card"><div id="info"></div><div id="map"></div><div id="stops"></div></div>`;marker=null;
+ if(window.L){const pts=s.map(x=>[x.lat,x.lng]);map=L.map("map");L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:"© OpenStreetMap"}).addTo(map);
+  L.polyline(pts,{color:"#1565e0",weight:4}).addTo(map);
+  s.forEach((x,i)=>L.circleMarker([x.lat,x.lng],{radius:i===t.from?9:6,color:i===t.from?"#e69a14":"#16213a",fillColor:"#fff",fillOpacity:1}).addTo(map).bindTooltip(x.n+(i===t.from?" (your stop)":"")));
+  map.fitBounds(pts,{padding:[20,20]});marker=L.marker(pts[0],{icon:L.divIcon({html:"<div style='font-size:30px;line-height:30px'>🚌</div>",className:"",iconSize:[30,30],iconAnchor:[15,15]})}).addTo(map)}
+ const draw=()=>{const c=load().find(x=>x.id===id)||t,st=status(c),d=depMs(c),now=Date.now();
+  const frac=st==="Arrived"?1:st==="Running"?(now-d)/(TRIP_H*3600000):0,km=Math.round(frac*TOTAL),b=s[c.from],dr=s[c.to],tb=stopMs(c,c.from),td=stopMs(c,c.to);
+  let head,sub="";
+  if(st==="Cancelled")head="Ticket cancelled";
+  else if(now<tb){head=`Bus reaches ${b.n} in ${dur(tb-now)}`;sub=`Expected ${fmt(tb)}`+(st==="Running"?` • ${Math.max(0,Math.round(b.d-km))} km away`:` • Bus starts ${s[0].n} ${fmt(d)}`)}
+  else if(now<td){head="You are on the bus";sub=`${dr.n} in ${dur(td-now)} • ETA ${fmt(td)}`}else head=`Reached ${dr.n}`;
+  $("info").innerHTML=`<div style="display:flex;justify-content:space-between"><b>${esc(c.id)} • ${esc(c.name)}</b><span class="tag ${st.toLowerCase()}">${st}</span></div>
+   <div class="hero"><div class="big">${head}</div><div class="muted">${sub}</div></div>
+   <div class="muted">${b.n} → ${dr.n} • Seats ${c.seats.join(", ")}</div><div class="bar"><i style="width:${frac*100}%"></i></div><div class="muted">Bus at ${km} / ${TOTAL} km (estimated from timetable)</div>
+   <div class="row">${canCancel(c)?`<button class="btn sm red" onclick="cancelTicket('${c.id}')">Cancel</button>`:""}${st!=="Cancelled"?`<button class="btn sm wa" onclick="sendWA('${c.id}')">WhatsApp</button>`:""}</div>`;
+  $("stops").innerHTML=s.map((x,i)=>`<div class="stop ${i===c.from?"mine":""} ${frac>0&&x.d<=km?"done":""}"><span>${frac>0&&x.d<=km?"✔ ":""}${x.n}${i===c.from?" (your stop)":""}${i===c.to?" (drop)":""}</span><span>${fmt(stopMs(c,i))}</span></div>`).join("");
+  if(marker)marker.setLatLng(posAt(s,km))};
+ draw();clearInterval(timer);timer=setInterval(draw,5000)}
+drawSeats();importLink();
+</script></body></html>
